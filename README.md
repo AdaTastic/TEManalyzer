@@ -101,6 +101,9 @@ The default model can be found in the model folder. A model is defined by the "m
 ## Training a custom model
 Going into model/trainer/modeltrainer.ipynb opens up a Jupyter notebook that can train a custom model. The model training results are saved as a tensorboard in the output folder. The validation loss can then be compared to determine the optimal number of iterations to train the dataset on. Checkpointing is not availible yet.
 
+## Editing classes
+The class_list in "class_info.json" should match the classes in the dataset used to train the model. The class list can be found in the dataset as annotations_coco.json If additional classes are added or you wish to tweak the colors of each class in the output, edit "class_info.json" accordingly.
+
 # License
 This project is licensed under the [GNU General Public License v3.0](LICENSE).
 
