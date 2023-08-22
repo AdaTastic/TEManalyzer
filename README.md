@@ -16,7 +16,7 @@ The program dependencies and their recommended versions can be found in dependen
 The model can also be trained using the "modeltrainer.ipynb", if you would like to use it, a Jupyter notebook running python 3.10.8 is required. 
 
 # Installation
-
+download latest release and unzip
 ### For anaconda/miniconda
 - install anaconda/miniconda
 - add /conda folder to path
@@ -32,7 +32,7 @@ The model can also be trained using the "modeltrainer.ipynb", if you would like 
 - install the rest of the packages in "dependencies.txt", any version should be fine
 
 # Usage
-If using conda, clicking "run_me_conda.bat" will start the created venv and open TEMGUI.py. Closing the GUI window will stop the venv.
+If using conda, clicking "run_me_conda.bat" will start the created venv and open TEMGUI.py. Closing the GUI window will stop the venv. If not using conda, ensure dependencies are installed and run TEMGUI.py
 
 ## Opening images
 Clicking open folder will allow you to select any folder containing your images. The image folder can be filled with .png, .jpg, or .dm3's and can be anywhere on the computer. Clicking the preview and output options will then generate preview and output folders inside the selected folder to output all the data.
