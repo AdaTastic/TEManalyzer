@@ -13,18 +13,24 @@ import matplotlib.pyplot as plt
 import math
 import dm3reader
 import h5py
+import configreader
 
-resizedSize = 2048
+def read_config():
+    compute_device = configreader.get_variable_from_ini("computation device")
+    resizedSize = int(configreader.get_variable_from_ini("output image size"))
+    sliceSize = int(configreader.get_variable_from_ini("output slice size"))
+    return compute_device,resizedSize,sliceSize
 
 def runOutputPredict(image_path,model_path,config_path):
+    compute_device,resizedSize,sliceSize = read_config()
     # define model
     detection_model = AutoDetectionModel.from_pretrained(
         model_type='detectron2',
         model_path=model_path,
         config_path=config_path,
         confidence_threshold=0.5,
-        image_size=512,
-        device="cpu", # 'cpu' or 'cuda:0'
+        image_size=sliceSize,
+        device=compute_device, # 'cpu' or 'cuda:0'
     )
 
     # generate resized img
@@ -58,8 +64,8 @@ def runOutputPredict(image_path,model_path,config_path):
     result = get_sliced_prediction(
         image_path,
         detection_model,
-        slice_height = int(resizedSize/4),
-        slice_width = int(resizedSize/4),
+        slice_height = int(sliceSize),
+        slice_width = int(sliceSize),
         overlap_height_ratio = 0.2,
         overlap_width_ratio = 0.2,
     )
@@ -170,6 +176,7 @@ def filterParticles(image_path,results,original_path):
     
 
 def genOutputImage(image_path,results_path):
+    compute_device,resizedSize,sliceSize = read_config()
     # Reading the data from the JSON file
     with open(results_path, "r") as f:
         results = json.load(f)
@@ -212,6 +219,7 @@ def genOutputImage(image_path,results_path):
     overlay_image.save(output_file)
 
 def writeData(txt_file_path):
+    compute_device,resizedSize,sliceSize = read_config()
     with open(txt_file_path, "r") as f:
         results = json.load(f)
 

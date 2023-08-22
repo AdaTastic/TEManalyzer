@@ -1,13 +1,14 @@
 import sys, os
 from PIL import Image
-from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QLabel, QSlider, QWidget, QPushButton, QColorDialog, QFileDialog, QGridLayout
+from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QLabel, QSlider, QWidget, QPushButton, QColorDialog, QFileDialog, QGridLayout, QLineEdit
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QColor, QMovie, qRgb
-from PyQt5.QtCore import Qt, QPointF
+from PyQt5.QtCore import Qt, QPoint, QPointF
 import preview, output
 import dm3reader
-import numpy as np
+import numpy as np 
 import cv2
 import h5py
+import configparser
 
 class TEMAnalyzerApp(QMainWindow):
     def __init__(self):
@@ -16,7 +17,7 @@ class TEMAnalyzerApp(QMainWindow):
 
     def initUI(self):
         self.setWindowTitle("Image Editor")
-        self.setGeometry(100, 100, 600, 400)
+        self.setGeometry(100, 100, 1300, 400)
 
         self.layout = QGridLayout()
 
@@ -27,28 +28,28 @@ class TEMAnalyzerApp(QMainWindow):
         self.current_image_index = 0
         self.image = None
         self.paint_mask_list = []
-        self.layout.addWidget(self.image_label,2,0,5,5)
+        self.layout.addWidget(self.image_label,2,0,20,5)
 
         # preview viewer
         self.preview_window = QLabel()
         self.preview_list = []
         self.current_preview_index = 0
         self.preview = None
-        self.layout.addWidget(self.preview_window,2,5,5,5)
+        self.layout.addWidget(self.preview_window,2,5,20,5)
 
         # blank image template
         self.blank1 = QLabel()
         self.blank2 = QLabel()
         self.load_blank()
-        self.layout.addWidget(self.blank1,2,0,5,5)
-        self.layout.addWidget(self.blank2,2,5,5,5)
+        self.layout.addWidget(self.blank1,2,0,20,5)
+        self.layout.addWidget(self.blank2,2,5,20,5)
 
         self.canvas_widget = QWidget()
         self.canvas_widget.setLayout(self.layout)
         self.setCentralWidget(self.canvas_widget)
 
         # load images
-        open_action = QAction("Open Folder", self)
+        open_action = QAction("Open Image Folder", self)
         open_action.triggered.connect(self.open_folder)
         self.toolbar = self.addToolBar("Open")
         self.toolbar.addAction(open_action)
@@ -57,20 +58,24 @@ class TEMAnalyzerApp(QMainWindow):
         self.prev_button = QPushButton("Previous", self)
         self.prev_button.clicked.connect(self.show_previous_image)
         self.layout.addWidget(self.prev_button,0,0,2,1)
+        self.prev_button.setStyleSheet("background-color: rgb(224, 108, 0); color: rgb(255, 255, 255);")
 
         # next button
         self.next_button = QPushButton("Next", self)
         self.next_button.clicked.connect(self.show_next_image)
         self.layout.addWidget(self.next_button,0,1,2,1)
+        self.next_button.setStyleSheet("background-color: rgb(224, 108, 0); color: rgb(255, 255, 255);")
 
         # brush size
         self.brush_size_up = QPushButton("△", self)
         self.brush_size_up.clicked.connect(self.increase_brush_size)
         self.layout.addWidget(self.brush_size_up,0,2)
+        self.brush_size_up.setStyleSheet("background-color: rgb(224, 108, 0); color: rgb(255, 255, 255);")
 
         self.brush_size_down = QPushButton("▽", self)
         self.brush_size_down.clicked.connect(self.decrease_brush_size)
         self.layout.addWidget(self.brush_size_down,1,2)
+        self.brush_size_down.setStyleSheet("background-color: rgb(224, 108, 0); color: rgb(255, 255, 255);")
 
         # contrast slider
         self.slider1 = QSlider(Qt.Horizontal, self)
@@ -78,6 +83,7 @@ class TEMAnalyzerApp(QMainWindow):
         self.slider1.setValue(100)
         self.slider1.valueChanged.connect(self.update_contrast)
         self.layout.addWidget(self.slider1,0,3)
+        self.slider1.setStyleSheet("background-color: rgb(224, 108, 0); color: rgb(255, 255, 255);")
 
         # brightness slider
         self.slider2 = QSlider(Qt.Horizontal, self)
@@ -85,31 +91,64 @@ class TEMAnalyzerApp(QMainWindow):
         self.slider2.setValue(0)
         self.slider2.valueChanged.connect(self.update_contrast)
         self.layout.addWidget(self.slider2,0,4)
+        self.slider2.setStyleSheet("background-color: rgb(224, 108, 0); color: rgb(255, 255, 255);")
 
         # reset edits button
         self.reset = QPushButton("reset", self)
         self.reset.clicked.connect(self.reset_image)
         self.layout.addWidget(self.reset,1,3)
+        self.reset.setStyleSheet("background-color: rgb(224, 108, 0); color: rgb(255, 255, 255);")
 
         # save edits button
         self.save = QPushButton("save/replace", self)
         self.save.clicked.connect(self.save_image)
         self.layout.addWidget(self.save,1,4,1,1)
+        self.save.setStyleSheet("background-color: rgb(224, 108, 0); color: rgb(255, 255, 255);")
 
         # gen output button
         self.output = QPushButton("Analyze All Images (full)", self)
         self.output.clicked.connect(self.gen_output)
         self.layout.addWidget(self.output,0,7,2,1)
+        self.output.setStyleSheet("background-color: rgb(224, 108, 0); color: rgb(255, 255, 255);")
 
         # generate preview
         self.preview_button = QPushButton("Show/Gen Preview", self)
         self.preview_button.clicked.connect(self.show_preview)
         self.layout.addWidget(self.preview_button,0,5,2,1)
+        self.preview_button.setStyleSheet("background-color: rgb(224, 108, 0); color: rgb(255, 255, 255);")
 
         # generate histogram
         self.preview_histogram = QPushButton("preview histogram", self)
         self.preview_histogram.clicked.connect(self.show_preview_histogram)
         self.layout.addWidget(self.preview_histogram,0,6,2,1)
+        self.preview_histogram.setStyleSheet("background-color: rgb(224, 108, 0); color: rgb(225, 255, 255);")
+
+        # switch models
+        self.model_button = QPushButton("Select Model Folder")
+        self.model_button.clicked.connect(self.select_model_folder)
+        self.layout.addWidget(self.model_button,0,10,1,1)
+        self.model_path = os.path.join(os.path.dirname(__file__), "model", "model_final.pth")
+        self.config_path = os.path.join(os.path.dirname(__file__), "model", "config.yaml")
+
+        # Variables
+        self.variables = {
+            "var_preview_size": {"label": "Preview Image Size", "default": "512", "row": 1, "col": 10},
+            "var_preview_slice": {"label": "Preview Slice Size", "default": "128", "row": 1, "col": 11},
+            "var_output_size": {"label": "Output Image Size", "default": "2048", "row": 3, "col": 10},
+            "var_output_slice": {"label": "Output Slice Size", "default": "512", "row": 3, "col": 11},
+            "var_comp_device": {"label": "Computation Device", "default": "cpu or cuda:0", "row": 5, "col": 10}
+        }
+        for var_name, var_info in self.variables.items():
+            label = QLabel(var_info["label"])
+            setattr(self, var_name, QLineEdit())
+            getattr(self, var_name).setPlaceholderText(var_info["default"])
+
+            self.layout.addWidget(label, var_info["row"], var_info["col"])
+            self.layout.addWidget(getattr(self, var_name), var_info["row"] + 1, var_info["col"])
+
+        self.save_button = QPushButton("Save to INI", self)
+        self.layout.addWidget(self.save_button, 0, 11, 1, 1)
+        self.save_button.clicked.connect(self.save_to_ini)
         
         # generation loading icon
         # loading_gif_path = "icons\loading.gif"  # Replace with the path to your GIF image
@@ -123,6 +162,41 @@ class TEMAnalyzerApp(QMainWindow):
         self.brush_color = Qt.white
         self.brush_size = 10
 
+        self.setStyleSheet("background-color: rgb(50, 50, 50); color: rgb(255, 255, 255);")
+        
+
+# selecting model code and variables --------------------------------------------------------------------------------------
+    def save_to_ini(self):
+        config = configparser.ConfigParser()
+        config['Settings'] = {}
+    
+        for var_name, var_info in self.variables.items():
+            value = getattr(self, var_name).text() or var_info["default"]
+            config['Settings'][var_info["label"]] = value
+
+        with open('config.ini', 'w') as configfile:
+            config.write(configfile)
+
+    def load_config(self):
+        config = configparser.ConfigParser()
+        config.read('config.ini')
+
+        if 'CONFIG' in config:
+            self.textbox1.setText(config.get('CONFIG', 'variable1'))
+            self.textbox2.setText(config.get('CONFIG', 'variable2'))
+
+    def select_model_folder(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.ReadOnly
+
+        folder = QFileDialog.getExistingDirectory(self, "Select Folder", "", options=options)
+        if folder:
+            for file in os.listdir(folder):
+                if file.lower().endswith(".pth"):
+                    self.model_path = os.path.join(folder, file)
+                elif file.lower().endswith(".yaml"):
+                    self.config_path = os.path.join(folder, file)
+
 # loading and showing images code ---------------------------------------------------------------------------------------------
     def load_blank(self):
         blank = np.zeros((500, 500), dtype=np.uint8)
@@ -133,7 +207,7 @@ class TEMAnalyzerApp(QMainWindow):
 
     def open_folder(self):
         options = QFileDialog.Options()
-        folder_path = QFileDialog.getExistingDirectory(self, "Open Folder", "", QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks)
+        folder_path = QFileDialog.getExistingDirectory(self, "Open Folder", "",  QFileDialog.DontResolveSymlinks)
         if folder_path:
             self.image_filenames = []
             self.image_list = []
@@ -258,17 +332,21 @@ class TEMAnalyzerApp(QMainWindow):
             #saving
             file_path = os.path.splitext(self.image_filenames[self.current_image_index])[0] + ".hdf5"
             self.image_filenames[self.current_image_index] = file_path
+            self.image_list[self.current_image_index] = self.image
             
             with h5py.File(file_path, "w") as f:
                 group = f.create_group("my_group")
                 for key, value in edited_image.items():
                     group.create_dataset(key, data=value)
-            print(type(pixelUnit))
+            
+            self.image_list[self.current_image_index] =self.image + self.qimage_to_array(self.paint_mask_list[self.current_image_index])
             
         else:
-            file_path = os.path.splitext(self.image_filenames[self.current_image_index])[0] + ".jpg"
+            file_path = os.path.splitext(self.image_filenames[self.current_image_index])[0] + ".png"
             self.image_filenames[self.current_image_index] = file_path
             data.save(file_path)
+            self.image_list[self.current_image_index] =self.image + self.qimage_to_array(self.paint_mask_list[self.current_image_index])
+            
 
 # Preview code ------------------------------------------------------------------------------------------------------------
     def show_preview(self):
@@ -290,9 +368,8 @@ class TEMAnalyzerApp(QMainWindow):
         
         current_file_path = os.path.abspath(__file__)
         current_directory = os.path.dirname(current_file_path)
-        model_path = os.path.join(current_directory,"model/model_final.pth")
-        config_path = os.path.join(current_directory,"model/config.yaml")
-        results, resized_img_path = preview.runPreviewPredict(image_path,model_path,config_path)
+        
+        results, resized_img_path = preview.runPreviewPredict(image_path,self.model_path,self.config_path)
         results_path = preview.filterParticles(resized_img_path,results,image_path)
         preview.genPreview(resized_img_path,results_path)
 
@@ -333,9 +410,7 @@ class TEMAnalyzerApp(QMainWindow):
             
             current_file_path = os.path.abspath(__file__)
             current_directory = os.path.dirname(current_file_path)
-            model_path = os.path.join(current_directory,"model/model_final.pth")
-            config_path = os.path.join(current_directory,"model/config.yaml")
-            results, resized_img_path = output.runOutputPredict(image_path,model_path,config_path)
+            results, resized_img_path = output.runOutputPredict(image_path,self.model_path,self.config_path)
             results_path = output.filterParticles(resized_img_path,results,image_path)
             output.genOutputImage(resized_img_path,results_path)
             output.writeData(results_path)
@@ -345,7 +420,10 @@ class TEMAnalyzerApp(QMainWindow):
         self.brush_size += 10
 
     def decrease_brush_size(self):
-        self.brush_size -= 10
+        if self.brush_size - 10 <= 0:
+            self.brush_size = 0
+        else:
+            self.brush_size -= 10
 
     def edit_image(self):
         if self.image_list:
@@ -360,22 +438,20 @@ class TEMAnalyzerApp(QMainWindow):
     def mousePressEvent(self, event):
         if event.buttons() == Qt.LeftButton and self.image_list:
             self.brush_pos = self.adjusted_pos(event.pos())
-            print(self.brush_pos)
+            # print(self.brush_pos)
             self.edit_image()
 
     def mouseMoveEvent(self, event):
         if event.buttons() == Qt.LeftButton and self.image_list:
             self.brush_pos = self.adjusted_pos(event.pos())
-            # self.brush_pos = self.brush_pos/2048 * 500
             self.edit_image()
 
     def adjusted_pos(self, original_pos):
-        # Modify the original_pos here as needed and return the adjusted position
-        # For example, to move the brush position down by 20 pixels, you can do the following:
-        height,width = self.image_list[self.current_image_index].shape[:2]
-        adjusted_x = original_pos.x()/500*width
-        adjusted_y = original_pos.y()/500*height
-        return QPointF(adjusted_x, adjusted_y)
+        local_pos = self.image_label.mapFrom(self, original_pos)  # Map event position to image_label coordinates
+        height, width = self.image_list[self.current_image_index].shape[:2]
+        adjusted_x = local_pos.x() / self.image_label.width() * width
+        adjusted_y = local_pos.y() / self.image_label.height() * height
+        return QPointF(adjusted_x,adjusted_y)
     
     def start_load(self):
         self.movie.start()

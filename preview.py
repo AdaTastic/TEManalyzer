@@ -13,10 +13,16 @@ import matplotlib.pyplot as plt
 import math
 import dm3reader
 import h5py
+import configreader
 
-resizedSize = 512
+def read_config():
+    compute_device = configreader.get_variable_from_ini("computation device")
+    resizedSize = int(configreader.get_variable_from_ini("preview image size"))
+    sliceSize = int(configreader.get_variable_from_ini("preview slice size"))
+    return compute_device,resizedSize,sliceSize
 
 def runPreviewPredict(image_path,model_path,config_path):
+    compute_device,resizedSize,sliceSize = read_config()
     # define model
     detection_model = AutoDetectionModel.from_pretrained(
         model_type='detectron2',
@@ -24,7 +30,7 @@ def runPreviewPredict(image_path,model_path,config_path):
         config_path=config_path,
         confidence_threshold=0.5,
         image_size=resizedSize,
-        device="cpu", # 'cpu' or 'cuda:0'
+        device=compute_device, # 'cpu' or 'cuda:0'
     )
 
     # generate resized img
@@ -51,15 +57,15 @@ def runPreviewPredict(image_path,model_path,config_path):
     filename = os.path.basename(image_path)
     name, ext = os.path.splitext(filename)
     dir_name = os.path.dirname(image_path)
-    image_path = dir_name + "/preview/" + name + "_resized.jpg"
+    image_path = dir_name + "/preview/" + name + "_resized.png"
     image.save(image_path)
 
     # predict
     result = get_sliced_prediction(
         image_path,
         detection_model,
-        slice_height = int(resizedSize/4),
-        slice_width = int(resizedSize/4),
+        slice_height = int(sliceSize),
+        slice_width = int(sliceSize),
         overlap_height_ratio = 0.2,
         overlap_width_ratio = 0.2,
     )
@@ -68,6 +74,7 @@ def runPreviewPredict(image_path,model_path,config_path):
     return results, image_path
 
 def filterParticles(image_path,results,original_path):
+    compute_device,resizedSize,sliceSize = read_config()
     image = Image.open(image_path)
     h,w = image.size
     # Initialize the mask arrays
@@ -154,7 +161,7 @@ def filterParticles(image_path,results,original_path):
     # new filtered particle list
     filtered_particles = [{"pixelSize": pixelSize, "pixelUnit": pixelUnit,
                            "height": height, "width": width}]
-    print(type(pixelUnit))
+    
     for i in filtered_particles_list:
         filtered_particles.append(results[i])
 
@@ -170,6 +177,7 @@ def filterParticles(image_path,results,original_path):
     
 
 def genPreview(image_path,results_path):
+    compute_device,resizedSize,sliceSize = read_config()
     # Reading the data from the JSON file
     with open(results_path, "r") as f:
         results = json.load(f)
@@ -212,6 +220,7 @@ def genPreview(image_path,results_path):
     overlay_image.save(output_file)
 
 def genHistogram(txt_file_path):
+    compute_device,resizedSize,sliceSize = read_config()
     with open(txt_file_path, "r") as f:
         results = json.load(f)
 
