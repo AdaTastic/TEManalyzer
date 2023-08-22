@@ -15,6 +15,11 @@ import dm3reader
 import h5py
 import configreader
 
+with open("class_info.json", "r") as json_file:
+    classes = json.load(json_file)
+class_list = classes['class_list']
+color_mapping = classes['color_mapping']
+
 def read_config():
     compute_device = configreader.get_variable_from_ini("computation device")
     resizedSize = int(configreader.get_variable_from_ini("output image size"))
@@ -190,14 +195,6 @@ def genOutputImage(image_path,results_path):
     mask_image = Image.fromarray(mask_array, mode='RGBA')
     draw = ImageDraw.Draw(mask_image)
 
-    class_list = ["", "cube", "hexagonal", "platelet", "platelet edge up"]
-    color_mapping = {
-        "cube": (255, 0, 0, 70),
-        "hexagonal": (3, 248, 252, 70),
-        "platelet": (252, 3, 86, 70),
-        "platelet edge up": (255, 255, 0, 70)
-    }
-
     results.pop(0)
     for particle in results:
         coords = particle['segmentation'][0]  # Assuming a single polygon per particle
@@ -205,7 +202,6 @@ def genOutputImage(image_path,results_path):
         if particle_class in color_mapping:
             color = color_mapping[particle_class]
             draw.polygon(coords, fill=color)
-
 
     # Create a new image by overlaying the mask on top of the original image
     overlay_image = Image.alpha_composite(image, mask_image)
@@ -223,9 +219,8 @@ def writeData(txt_file_path):
     with open(txt_file_path, "r") as f:
         results = json.load(f)
 
-    rectangular_dims = []
-    circular_dims =[]
-    class_list = ["", "cube", "hexagonal", "platelet", "platelet edge up"]
+    rectangular_dims = {}
+    circular_dims ={}
     rect_file_path = os.path.splitext(txt_file_path)[0] + "_rect.json"
     circ_file_path = os.path.splitext(txt_file_path)[0] + "_circ.json"
 
@@ -242,7 +237,7 @@ def writeData(txt_file_path):
         coords = mask.reshape(-1, 2)
         points = coords
         particle_class = class_list[particle['category_id']]
-        conf = particle['score']
+        particle_dimensions = {}
 
         # Find the minimum area rectangle that fits around the points
         if particle_class == "hexagonal":
@@ -253,14 +248,24 @@ def writeData(txt_file_path):
             center, (major_axis, minor_axis), angle = ellipse
             minor_axis = height/resizedSize*minor_axis*pixelSize
             major_axis = height/resizedSize*major_axis*pixelSize
-            circular_dims.append([index, minor_axis, major_axis, particle_class, conf])
+            particle['index'] = index
+            particle_dimensions['minor length'] = minor_axis
+            particle_dimensions['major length'] = major_axis
+            particle_dimensions['particle class'] = particle_class
+            particle_dimensions['conf'] = particle['score']
+            circular_dims.append(particle_dimensions)
             continue
 
         rect = cv2.minAreaRect(points)
         major_lentgh, minor_length = rect[1]
         major_lentgh = height/resizedSize*major_lentgh*pixelSize
         minor_length = height/resizedSize*minor_length*pixelSize
-        rectangular_dims.append([index, major_lentgh, minor_length, particle_class, conf])
+        particle['index'] = index
+        particle_dimensions['minor length'] = minor_length
+        particle_dimensions['major length'] = major_lentgh
+        particle_dimensions['particle class'] = particle_class
+        particle_dimensions['conf'] = particle['score']
+        rectangular_dims.append(particle_dimensions)
 
     with open(rect_file_path, 'w') as json_file:
         json.dump(rectangular_dims, json_file)

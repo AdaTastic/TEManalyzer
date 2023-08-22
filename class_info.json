@@ -1,0 +1,35 @@
+{
+    "class_list": [
+        "",
+        "cube",
+        "hexagonal",
+        "platelet",
+        "platelet edge up"
+    ],
+    "color_mapping": {
+        "cube": [
+            255,
+            0,
+            0,
+            70
+        ],
+        "hexagonal": [
+            3,
+            248,
+            252,
+            70
+        ],
+        "platelet": [
+            252,
+            3,
+            86,
+            70
+        ],
+        "platelet edge up": [
+            255,
+            255,
+            0,
+            70
+        ]
+    }
+}

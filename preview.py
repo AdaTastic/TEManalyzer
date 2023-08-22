@@ -15,6 +15,11 @@ import dm3reader
 import h5py
 import configreader
 
+with open("class_info.json", "r") as json_file:
+    classes = json.load(json_file)
+class_list = classes['class_list']
+color_mapping = classes['color_mapping']
+
 def read_config():
     compute_device = configreader.get_variable_from_ini("computation device")
     resizedSize = int(configreader.get_variable_from_ini("preview image size"))
@@ -191,13 +196,7 @@ def genPreview(image_path,results_path):
     mask_image = Image.fromarray(mask_array, mode='RGBA')
     draw = ImageDraw.Draw(mask_image)
 
-    class_list = ["", "cube", "hexagonal", "platelet", "platelet edge up"]
-    color_mapping = {
-        "cube": (255, 0, 0, 70),
-        "hexagonal": (3, 248, 252, 70),
-        "platelet": (252, 3, 86, 70),
-        "platelet edge up": (255, 255, 0, 70)
-    }
+
 
     results.pop(0)
     for particle in results:
@@ -225,8 +224,7 @@ def genHistogram(txt_file_path):
         results = json.load(f)
 
     rectangular_dims = []
-    circular_dims =[]
-    class_list = ["", "cube", "hexagonal", "platelet", "platelet edge up"]
+    circular_dims = []
 
     # get size info
     scaleInfo = results.pop(0)
@@ -241,6 +239,7 @@ def genHistogram(txt_file_path):
         coords = mask.reshape(-1, 2)
         points = coords
         particle_class = class_list[particle['category_id']]
+        particle_dimensions = {}
 
         # Find the minimum area rectangle that fits around the points
         if particle_class == "hexagonal":
@@ -251,22 +250,32 @@ def genHistogram(txt_file_path):
             center, (major_axis, minor_axis), angle = ellipse
             minor_axis = height/resizedSize*minor_axis*pixelSize
             major_axis = height/resizedSize*major_axis*pixelSize
-            circular_dims.append([index, minor_axis, major_axis])
+            particle['index'] = index
+            particle_dimensions['minor length'] = minor_axis
+            particle_dimensions['major length'] = major_axis
+            particle_dimensions['particle class'] = particle_class
+            particle_dimensions['conf'] = particle['score']
+            circular_dims.append(particle_dimensions)
             continue
 
         rect = cv2.minAreaRect(points)
         major_lentgh, minor_length = rect[1]
         major_lentgh = height/resizedSize*major_lentgh*pixelSize
         minor_length = height/resizedSize*minor_length*pixelSize
-        rectangular_dims.append([index, major_lentgh, minor_length])
+        particle['index'] = index
+        particle_dimensions['minor length'] = minor_length
+        particle_dimensions['major length'] = major_lentgh
+        particle_dimensions['particle class'] = particle_class
+        particle_dimensions['conf'] = particle['score']
+        rectangular_dims.append(particle_dimensions)
 
     # plot rectangulars
     # Extract the heights and widths from rectangular_dims
-    heights = [item[1] for item in rectangular_dims]
-    widths = [item[2] for item in rectangular_dims]
+    major_length = [item['major length'] for item in rectangular_dims]
+    minor_length = [item['minor length'] for item in rectangular_dims]
 
     # Combine the heights and widths into a single list representing lengths
-    lengths = heights + widths
+    lengths = major_length + minor_length
 
     # Plot the histogram
     plt.figure(1)
@@ -279,11 +288,11 @@ def genHistogram(txt_file_path):
     plt.show()
 
     # plot Circulars
-    minor_r = [item[1] for item in circular_dims]
-    major_r = [item[2] for item in circular_dims]
+    major_length = [item['major length'] for item in circular_dims]
+    minor_length = [item['minor length'] for item in circular_dims]
 
     # Combine the heights and widths into a single list representing lengths
-    lengths = minor_r + major_r
+    lengths = minor_length + major_length
 
     # Plot the histogram
     plt.figure(2)
